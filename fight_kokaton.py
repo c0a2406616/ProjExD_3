@@ -140,15 +140,42 @@ class Bomb:
         self.rct.move_ip(self.vx, self.vy)
         screen.blit(self.img, self.rct)
 
+ 
+class Score:
+    """
+    スコア表示に関するクラス
+    """
+    def __init__(self):
+        self.fonto = pg.font.SysFont("hgp創英角ﾎﾟｯﾌﾟ体", 30)
+        self.color = (0, 0, 255)  # 青
+        self.score = 0
+        self.img = self.fonto.render(f"Score: {self.score}", True, self.color)
+        self.rct = self.img.get_rect()
+        self.rct.topleft = (30, HEIGHT - 50)
+
+    def update(self, screen: pg.Surface):
+        self.img = self.fonto.render(f"Score: {self.score}", True, self.color)
+        screen.blit(self.img, self.rct)
+
+
 
 def main():
     pg.display.set_caption("たたかえ！こうかとん")
     screen = pg.display.set_mode((WIDTH, HEIGHT))    
     bg_img = pg.image.load("fig/pg_bg.jpg")
     bird = Bird((300, 200))
+
+
+    # 複数ビーム用リストを用意
+    beams: list[Beam] = []
+
+
     beam = None
     # bomb = Bomb((255, 0, 0), 10)
     bombs = [Bomb((255, 0, 0), 10) for _ in range(NUM_OF_BOMBS)]
+    score = Score()
+
+    
     clock = pg.time.Clock()
     tmr = 0
     while True:
@@ -173,14 +200,34 @@ def main():
                 return
     # if beam is not None:
         #if bomb is not None:
-        for j,bomb in enumerate(bombs):
-            if beam is not None:
-                if beam.rct.colliderect(bomb.rct):  # ビームと爆弾の衝突判定
-                    # if beam is not None:   
-                    beam = None  # ビームを消す
-                    bombs[j] = None  # 爆弾を消す
+        # ビーム vs 爆弾 の衝突判定 & スコア加算
+        for i, beam in enumerate(beams):
+            if beam is None:
+                continue
+            for j, bomb in enumerate(bombs):
+                if beam.rct.colliderect(bomb.rct):
+                    beams[i] = None
+                    bombs[j] = None
                     bird.change_img(6, screen)
+                    score.score += 1
+
             bombs = [bomb for bomb in bombs if bomb is not None]  #撃ち落されていない爆弾だけのリスト
+            beams = [b for b in beams if b is not None]
+            
+
+            def in_bound_beam(b: Beam) -> bool:
+                return check_bound(b.rct) == (True, True)
+        beams = [b for b in beams if in_bound_beam(b)]
+
+        # 各オブジェクトの update/draw
+        for beam in beams:
+            beam.update(screen)
+        for bomb in bombs:
+            bomb.update(screen)
+
+        #スコア表示    
+        score.update(screen)
+
 
 
         key_lst = pg.key.get_pressed()
